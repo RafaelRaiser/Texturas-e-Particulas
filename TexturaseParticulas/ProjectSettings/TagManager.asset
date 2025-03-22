@@ -3,15 +3,17 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - FAKE
+  - Ground
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - GroundLayer
   - Water
   - UI
-  - 
+  - GroundCheck
   - 
   - 
   - 
