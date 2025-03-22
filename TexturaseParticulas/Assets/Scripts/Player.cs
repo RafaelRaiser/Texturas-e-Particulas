@@ -6,6 +6,8 @@ public class Player : MonoBehaviour
     public float speed = 5.0f;
     [SerializeField] private AudioClip[] footstepClips;
     [SerializeField] private AudioSource footstepAudioSource;
+    [SerializeField] private AudioSource danceMusicSource;
+    [SerializeField] private ParticleSystem dirtParticlesPrefab; 
 
     private Animator animator;
     private bool isWalking = false;
@@ -31,6 +33,16 @@ public class Player : MonoBehaviour
         if (footstepClips == null || footstepClips.Length == 0)
         {
             Debug.LogError("Nenhum som de passo configurado no array footstepClips.");
+        }
+
+        if (danceMusicSource == null)
+        {
+            Debug.LogError("AudioSource da música da dança não configurado.");
+        }
+
+        if (dirtParticlesPrefab == null)
+        {
+            Debug.LogError("Prefab das partículas de sujeira não configurado.");
         }
     }
 
@@ -63,7 +75,18 @@ public class Player : MonoBehaviour
                 int randomIndex = Random.Range(0, footstepClips.Length);
                 footstepAudioSource.clip = footstepClips[randomIndex];
                 footstepAudioSource.Play();
+
+       
+                SpawnDirtParticles();
             }
+
+            if (Input.GetKey(KeyCode.W)) movement += Vector3.forward;
+            if (Input.GetKey(KeyCode.S)) movement += Vector3.back;
+            if (Input.GetKey(KeyCode.A)) movement += Vector3.left;
+            if (Input.GetKey(KeyCode.D)) movement += Vector3.right;
+
+            movement = movement.normalized * speed * Time.deltaTime;
+            rb.MovePosition(rb.position + movement);
         }
         else
         {
@@ -73,14 +96,6 @@ public class Player : MonoBehaviour
                 animator.SetBool("walk", false);
             }
         }
-
-        if (Input.GetKey(KeyCode.W)) movement += Vector3.forward;
-        if (Input.GetKey(KeyCode.S)) movement += Vector3.back;
-        if (Input.GetKey(KeyCode.A)) movement += Vector3.left;
-        if (Input.GetKey(KeyCode.D)) movement += Vector3.right;
-
-        movement = movement.normalized * speed * Time.deltaTime;
-        rb.MovePosition(rb.position + movement);
     }
 
     private void MaintainGroundLevel()
@@ -98,13 +113,69 @@ public class Player : MonoBehaviour
         animator.SetBool("walk", false);
         animator.SetTrigger("dance");
         rb.velocity = Vector3.zero;
-        yield return new WaitForSeconds(5.0f);
+
+        if (danceMusicSource != null && danceMusicSource.clip != null)
+        {
+            danceMusicSource.Play();
+        }
+
+        float danceDuration = GetAnimationDuration("ShrekDance"); 
+        if (danceDuration > 0)
+        {
+            yield return new WaitForSeconds(danceDuration);
+        }
+        else
+        {
+            Debug.LogWarning("Duração da animação de dança não encontrada ou inválida.");
+            yield return new WaitForSeconds(5f); 
+        }
+
+      
+        if (danceMusicSource != null && danceMusicSource.isPlaying)
+        {
+            danceMusicSource.Stop();
+        }
+
         EndDance();
     }
 
     private void EndDance()
     {
         isDancing = false;
+        animator.ResetTrigger("dance");
         animator.SetTrigger("idle");
+    }
+
+   
+    private float GetAnimationDuration(string animationName)
+    {
+        if (animator != null && animator.runtimeAnimatorController != null)
+        {
+            RuntimeAnimatorController ac = animator.runtimeAnimatorController;
+            foreach (AnimationClip clip in ac.animationClips)
+            {
+                if (clip.name == animationName)
+                {
+                    return clip.length;
+                }
+            }
+            Debug.LogWarning($"Animação '{animationName}' não encontrada.");
+        }
+        else
+        {
+            Debug.LogWarning("Animator ou RuntimeAnimatorController não configurado.");
+        }
+        return 0f;
+    }
+
+  
+    private void SpawnDirtParticles()
+    {
+        if (dirtParticlesPrefab != null)
+        {
+            ParticleSystem dirtParticles = Instantiate(dirtParticlesPrefab, transform.position, Quaternion.identity);
+            dirtParticles.Play();
+            Destroy(dirtParticles.gameObject, dirtParticles.main.duration);
+        }
     }
 }
